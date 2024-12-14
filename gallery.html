@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Image Gallery</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f4f4f4;
+    }
+
+    .gallery {
+      display: flex;
+      justify-content: center;
+      padding: 20px;
+      flex-wrap: wrap;
+    }
+
+    .thumbnail-container {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .thumbnail {
+      width: 100%;
+      height: auto;
+      cursor: pointer;
+      border-radius: 5px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    .thumbnail:hover {
+      opacity: 0.8;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.7);
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+    }
+
+    .modal-content {
+      max-width: 90%;
+      max-height: 80%;
+      margin: auto;
+      display: block;
+      transition: transform 0.3s ease;
+    }
+
+    .caption {
+      text-align: center;
+      color: #fff;
+      font-size: 18px;
+      margin-top: 15px;
+    }
+
+    .nav-btn {
+      position: absolute;
+      top: 50%;
+      background-color: rgba(0, 0, 0, 0.5);
+      color: white;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      padding: 10px;
+      border-radius: 50%;
+      transform: translateY(-50%);
+    }
+
+    #prev {
+      left: 10px;
+    }
+
+    #next {
+      right: 10px;
+    }
+
+    .close {
+      color: #fff;
+      font-size: 40px;
+      font-weight: bold;
+      position: absolute;
+      top: 10px;
+      right: 25px;
+      cursor: pointer;
+    }
+
+    .zoom-btn {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background-color: rgba(0, 0, 0, 0.5);
+      color: white;
+      border: none;
+      font-size: 20px;
+      cursor: pointer;
+      padding: 10px;
+      border-radius: 50%;
+    }
+
+    .search-bar {
+      text-align: center;
+      margin: 20px;
+    }
+
+    .search-bar input {
+      padding: 10px;
+      font-size: 16px;
+      width: 80%;
+      max-width: 400px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="search-bar">
+    <input type="text" id="search" placeholder="Search images by title or description..." />
+  </div>
+
+  <div class="gallery">
+    <div class="thumbnail-container">
+      <img src="beaches.jpg" alt="Image 1 - Beach" class="thumbnail" data-description="A beautiful beach.">
+      <img src="mountain.jpg" alt="Image 2 - Mountain" class="thumbnail" data-description="Snow-capped mountains in winter.">
+      <img src="city.jpg" alt="Image 3 - City" class="thumbnail" data-description="City skyline during sunset.">
+      <img src="forest.jpg" alt="Image 4 - Forest" class="thumbnail" data-description="Lush green forest.">
+      <!-- Add more images as needed -->
+    </div>
+  </div>
+
+  <!-- Modal for the larger view -->
+  <div class="modal" id="modal">
+    <span class="close" id="close">&times;</span>
+    <button id="zoom-in" class="zoom-btn">+</button>
+    <button id="zoom-out" class="zoom-btn">-</button>
+    <img id="modal-img" class="modal-content">
+    <div class="caption" id="caption"></div>
+    <button id="prev" class="nav-btn">&#10094;</button>
+    <button id="next" class="nav-btn">&#10095;</button>
+  </div>
+
+  <script>
+    let currentImageIndex = 0;
+    let zoomLevel = 1;
+    const images = document.querySelectorAll('.thumbnail');
+    const modal = document.getElementById('modal');
+    const modalImg = document.getElementById('modal-img');
+    const caption = document.getElementById('caption');
+    const closeBtn = document.getElementById('close');
+    const prevBtn = document.getElementById('prev');
+    const nextBtn = document.getElementById('next');
+    const zoomInBtn = document.getElementById('zoom-in');
+    const zoomOutBtn = document.getElementById('zoom-out');
+    const searchInput = document.getElementById('search');
+
+    // Open the modal when a thumbnail is clicked
+    images.forEach((image, index) => {
+      image.addEventListener('click', () => {
+        currentImageIndex = index;
+        openModal();
+      });
+    });
+
+    // Close the modal when the close button is clicked
+    closeBtn.addEventListener('click', closeModal);
+
+    // Show the previous image
+    prevBtn.addEventListener('click', showPrevImage);
+
+    // Show the next image
+    nextBtn.addEventListener('click', showNextImage);
+
+    // Zoom in functionality
+    zoomInBtn.addEventListener('click', () => {
+      zoomLevel += 0.2;
+      updateZoom();
+    });
+
+    // Zoom out functionality
+    zoomOutBtn.addEventListener('click', () => {
+      zoomLevel = Math.max(1, zoomLevel - 0.2);
+      updateZoom();
+    });
+
+    // Search functionality
+    searchInput.addEventListener('input', filterImages);
+
+    // Function to open the modal
+    function openModal() {
+      const src = images[currentImageIndex].src;
+      const alt = images[currentImageIndex].alt;
+      const description = images[currentImageIndex].dataset.description;
+      modalImg.src = src;
+      caption.textContent = `${alt}: ${description}`;
+      modal.style.display = 'flex';
+    }
+
+    // Function to close the modal
+    function closeModal() {
+      modal.style.display = 'none';
+      zoomLevel = 1; // Reset zoom when closing modal
+      updateZoom();
+    }
+
+    // Function to show the previous image
+    function showPrevImage() {
+      currentImageIndex = (currentImageIndex - 1 + images.length) % images.length;
+      openModal();
+    }
+
+    // Function to show the next image
+    function showNextImage() {
+      currentImageIndex = (currentImageIndex + 1) % images.length;
+      openModal();
+    }
+
+    // Function to update the zoom level
+    function updateZoom() {
+      modalImg.style.transform = `scale(${zoomLevel})`;
+    }
+
+    // Function to filter images based on search input
+    function filterImages() {
+      const searchTerm = searchInput.value.toLowerCase();
+      images.forEach(image => {
+        const title = image.alt.toLowerCase();
+        const description = image.dataset.description.toLowerCase();
+        if (title.includes(searchTerm) || description.includes(searchTerm)) {
+          image.style.display = 'block';
+        } else {
+          image.style.display = 'none';
+        }
+      });
+    }
+  </script>
+
+</body>
+</html>
